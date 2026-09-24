@@ -1,4 +1,5 @@
 import numpy as np
+import itertools
 # 0: libre
 # 1: muro
 # 2: fuego
@@ -23,7 +24,13 @@ def obtener_vecinos_validos(mapa, posicion_actual):
             if(mapa[nuevo_r][nuevo_c] in [0,3]):
                 vecinos_validos.append((nuevo_r,nuevo_c))
     return vecinos_validos
-
+def obtener_estados_validos(mapa,posicion_actual):
+    opciones_por_agente = []
+    for agente in posicion_actual:
+        vecinos = obtener_vecinos_validos(mapa,agente)
+        opciones_por_agente.append(vecinos)
+    expansion = list(itertools.product(*opciones_por_agente))
+    return expansion
 def generar_posicion_fuego(mapa):
     coordenadas_libres = np.argwhere(mapa == 0)
     indice_aleatorio = np.random.randint(0, len(coordenadas_libres))
@@ -45,36 +52,64 @@ def generar_posicion_agentes(mapa, cantidad_agentes):
     return posicion_agentes
 
 
-def iniciar_entorno(pisos_totales, cantidad_agentes):
+def iniciar_entorno(eleccion_mapa, pisos_totales, cantidad_agentes):
 
-    
-
-    # 22 x 22
-    #uno solo pasillo, unico camino a la salida
-    piso_base = np.array([
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1],
-        [1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1],
-        [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    if(eleccion_mapa == 1):
+        # 13 x 13
+        # mapa cuellos de botella
+        piso_base = np.array([
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
+        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        [1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
+        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        [1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
+        [1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 3],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     ], dtype=np.int8)
+    elif(eleccion_mapa == 2):
+        piso_base = np.array([
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+            [1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1],
+            [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1],
+            [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1],
+            [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1],
+            [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1],
+            [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1],
+            [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 3],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        ], dtype=np.int8)
+    elif(eleccion_mapa == 4):
+       piso_base = np.array([
+                   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                   [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
+                   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+               ], dtype=np.int8)   
+    else:
+        piso_base = np.array([
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+            [1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 3],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        ], dtype=np.int8)            
    
 
     mapa = np.array([piso_base] * pisos_totales, dtype=np.int8) # es 3d al considerar los pisos
@@ -91,14 +126,27 @@ def calcular_congestion(posicion_agentes):
         congestion[pos] = congestion.get(pos,0 ) + 1 # si no existe la clave inicia en 0 la cuenta
     return congestion
 
-def calcular_costo(celda):
+
+def calcular_costo(nuevo_estado, turno_futuro,tabla_reservas):
     """
-    Calculamos el costo a una celda usando 2^(ocupantes) + 1
+    Dada la tabla de reservas, pregunto cuánto me costaría moverme a nuevo_estado en turno_futuro.
+    turno futuro es el turno en el que me movería.
     """
-    congestion = calcular_congestion
-    ocupantes = congestion.get(celda,0) # 0 si no hay ningun agente en dicha celda
-    costo = 2**(ocupantes) + 1 #costo exponencial
+    ocupantes = tabla_reservas.get((turno_futuro,nuevo_estado),0)
+    costo =  2**ocupantes #costo exponencial
     return costo
+
+def actualizar_tabla_reservas(tabla_reservas, ruta_agente):
+    """
+    Dado los movimientos de un agente, actualizamos la cantidad de agentes en una casilla en tabla de reservas ,
+    agregando cada casilla en la que está en el turno correspondiente
+    """
+    #usamos enumarate para tener el indice que representa el turno
+    for turno, posicion in enumerate(ruta_agente):
+        tabla_reservas[(turno,posicion)] = tabla_reservas.get((turno,posicion),0) + 1
+    return tabla_reservas    
+
+    
 
 def propagar_fuego(mapa,posicion_agentes,celdas_fuego):
 
@@ -144,3 +192,23 @@ def propagar_fuego(mapa,posicion_agentes,celdas_fuego):
         nuevas_posicion_agentes = posicion_agentes
     celdas_fuego.update(nuevas_celdas)
     return mapa, nuevas_posicion_agentes,celdas_fuego
+
+def obtener_agentes_del_piso(posiciones_agentes: tuple, piso_actual: int) -> tuple:
+    """
+    Filtra la tupla global 3D y retorna una tupla 2D (fila, columna) 
+    solo con los agentes que pertenecen al piso solicitado.
+    """
+    # Si el índice 0 del agente coincide con el piso_actual, extraemos solo su fila y columna
+    agentes_2d = tuple(
+        (agente[1], agente[2]) for agente in posiciones_agentes if agente[0] == piso_actual
+    )
+    return agentes_2d
+
+def obtener_fuego_del_piso(celdas_fuego: set, piso_actual: int) -> set:
+    """
+    Filtra el set global de fuego 3D a un set 2D para el piso actual.
+    """
+    fuego_2d = set(
+        (fuego[1], fuego[2]) for fuego in celdas_fuego if fuego[0] == piso_actual
+    )
+    return fuego_2d
