@@ -52,8 +52,10 @@ def generar_posicion_agentes(mapa, cantidad_agentes):
     return posicion_agentes
 
 
-def iniciar_entorno(eleccion_mapa, pisos_totales, cantidad_agentes):
-
+def iniciar_entorno(eleccion_mapa, pisos_totales, cantidad_agentes, es_informada):
+    posicion_objetivo = ((12,12)) # notar que todos los pisos tienen la misma ubicacion de la salida y los algoritmos usan
+                                  # la posicion en 2d, por ende no indicamos el piso
+                                
     if(eleccion_mapa == 1):
         # 13 x 13
         # mapa cuellos de botella
@@ -88,12 +90,14 @@ def iniciar_entorno(eleccion_mapa, pisos_totales, cantidad_agentes):
             [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 3],
             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
         ], dtype=np.int8)
+        #BORRAAAAAAAR
     elif(eleccion_mapa == 4):
        piso_base = np.array([
                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
                ], dtype=np.int8)   
+       posicion_objetivo = (1,10)
     else:
         piso_base = np.array([
             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -116,6 +120,8 @@ def iniciar_entorno(eleccion_mapa, pisos_totales, cantidad_agentes):
     mapa,celda_elegida = generar_posicion_fuego(mapa)
     celdas_fuego = {celda_elegida}
     posicion_agentes = generar_posicion_agentes(mapa,cantidad_agentes)
+    if(es_informada):
+        return  mapa, posicion_agentes,celdas_fuego, posicion_objetivo
     return mapa, posicion_agentes,celdas_fuego
 
 def calcular_congestion(posicion_agentes):
@@ -133,7 +139,7 @@ def calcular_costo(nuevo_estado, turno_futuro,tabla_reservas):
     turno futuro es el turno en el que me movería.
     """
     ocupantes = tabla_reservas.get((turno_futuro,nuevo_estado),0)
-    costo =  2**ocupantes #costo exponencial
+    costo =  3**ocupantes #costo exponencial
     return costo
 
 def actualizar_tabla_reservas(tabla_reservas, ruta_agente):
