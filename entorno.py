@@ -89,26 +89,18 @@ def iniciar_entorno(eleccion_mapa, pisos_totales, cantidad_agentes, es_informada
             [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1],
             [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 3],
             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        ], dtype=np.int8)
-        #BORRAAAAAAAR
-    elif(eleccion_mapa == 4):
-       piso_base = np.array([
-                   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                   [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-                   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-               ], dtype=np.int8)   
-       posicion_objetivo = (1,10)
+        ], dtype=np.int8) 
     else:
         piso_base = np.array([
             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
             [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1],
             [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
+            [1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
             [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             [1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
             [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
             [1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1],
             [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 3],
@@ -139,7 +131,7 @@ def calcular_costo(nuevo_estado, turno_futuro,tabla_reservas):
     turno futuro es el turno en el que me movería.
     """
     ocupantes = tabla_reservas.get((turno_futuro,nuevo_estado),0)
-    costo =  3**ocupantes #costo exponencial
+    costo =  3*ocupantes + 1
     return costo
 
 def actualizar_tabla_reservas(tabla_reservas, ruta_agente):
@@ -200,15 +192,12 @@ def propagar_fuego(mapa,posicion_agentes,celdas_fuego):
     return mapa, nuevas_posicion_agentes,celdas_fuego
 
 def obtener_agentes_del_piso(posiciones_agentes: tuple, piso_actual: int) -> tuple:
-    """
-    Filtra la tupla global 3D y retorna una tupla 2D (fila, columna) 
-    solo con los agentes que pertenecen al piso solicitado.
-    """
-    # Si el índice 0 del agente coincide con el piso_actual, extraemos solo su fila y columna
-    agentes_2d = tuple(
-        (agente[1], agente[2]) for agente in posiciones_agentes if agente[0] == piso_actual
-    )
-    return agentes_2d
+    """Retorna el ID global y la coordenada 2D de cada agente en el piso."""
+    agentes_2d = []
+    for id_global, agente in enumerate(posiciones_agentes):
+        if agente[0] == piso_actual:
+            agentes_2d.append((id_global, (agente[1], agente[2])))
+    return tuple(agentes_2d)
 
 def obtener_fuego_del_piso(celdas_fuego: set, piso_actual: int) -> set:
     """
@@ -218,3 +207,80 @@ def obtener_fuego_del_piso(celdas_fuego: set, piso_actual: int) -> set:
         (fuego[1], fuego[2]) for fuego in celdas_fuego if fuego[0] == piso_actual
     )
     return fuego_2d
+
+import numpy as np
+
+def renderizar_interfaz_terminal(mapa_edificio, posiciones_globales, celdas_fuego):
+    """
+    Dibuja el edificio tridimensional en la terminal alineando los pisos de izquierda a derecha.
+    Muestra el mapa estructural arriba y la matriz con los agentes (a, b, c...) abajo.
+    """
+    posiciones_agentes = tuple(posiciones_globales[k] for k in sorted(posiciones_globales.keys()))
+    pisos, filas, columnas = mapa_edificio.shape # Se extraen las dimensiones del array 3D[cite: 1]
+    
+    # Convenciones de la simulación: 0 Libre, 1 Muro, 2 fuego , 3 salida
+    simbolos = {0: '·', 1: '█', 2: 'F', 3: 'E'} 
+    
+    # Mapeo de agentes transformando su ID a letras ASCII (0 -> 'a', 1 -> 'b', etc.)
+    mapa_agentes = {}
+    
+    # Se itera sobre la tupla de tuplas inmutable de los agentes[cite: 1]
+    for i, (p, r, c) in enumerate(posiciones_agentes):
+        if (p, r, c) not in mapa_agentes:
+            # chr(97) en ASCII es 'a'. Usamos módulo 26 por si tienes más de 26 agentes.
+            letra = chr(97 + (i % 26)) 
+            mapa_agentes[(p, r, c)] = letra
+        else:
+            # Símbolo de congestión si varios agentes ocupan la misma baldosa al mismo tiempo[cite: 1]
+            mapa_agentes[(p, r, c)] = '+' 
+
+    top_grids = []
+    bottom_grids = []
+    
+    # Construcción de las matrices visuales por piso
+    for p in range(pisos):
+        top_grid = []
+        bottom_grid = []
+        for r in range(filas):
+            fila_top = []
+            fila_bottom = []
+            for c in range(columnas):
+                # Evaluación del estado del entorno (Propagación del fuego)[cite: 1]
+                if (p, r, c) in celdas_fuego or mapa_edificio[p, r, c] == 2:
+                    simbolo_base = 'F'
+                else:
+                    simbolo_base = simbolos.get(mapa_edificio[p, r, c], '?')
+                
+                # La matriz superior solo muestra la estructura
+                fila_top.append(simbolo_base)
+                
+                # La matriz inferior sobrepone a los agentes
+                if (p, r, c) in mapa_agentes:
+                    fila_bottom.append(mapa_agentes[(p, r, c)])
+                else:
+                    fila_bottom.append(simbolo_base)
+                    
+            top_grid.append(" ".join(fila_top))
+            bottom_grid.append(" ".join(fila_bottom))
+            
+        top_grids.append(top_grid)
+        bottom_grids.append(bottom_grid)
+        
+    # Cálculos para la alineación horizontal de los pisos
+    ancho_piso = columnas * 2 - 1
+    separador_largo = "-" * ((ancho_piso + 3) * pisos)
+    
+    # 1. Encabezados de Pisos
+    encabezados = [f"PISO {p}".center(ancho_piso) for p in range(pisos)]
+    print("\n" + separador_largo)
+    print(" | ".join(encabezados))
+    print(separador_largo)
+    
+    
+    # 3. Renderizado Bottom: Agentes y Entorno
+    print("MOVIMIENTO DE AGENTES (Abajo)".center(len(separador_largo)))
+    print(separador_largo)
+    for r in range(filas):
+        # Se imprime la fila 'r' de todos los pisos, mostrando las letras de los agentes
+        print(" | ".join([bottom_grids[p][r] for p in range(pisos)]))
+    print(separador_largo + "\n")

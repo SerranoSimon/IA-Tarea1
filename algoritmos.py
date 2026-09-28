@@ -1,6 +1,6 @@
 import _heapq
 from collections import deque
-from entorno import obtener_vecinos_validos, calcular_costo,  actualizar_tabla_reservas, iniciar_entorno, propagar_fuego, obtener_agentes_del_piso
+from entorno import obtener_vecinos_validos, calcular_costo,  actualizar_tabla_reservas, iniciar_entorno, propagar_fuego, obtener_agentes_del_piso,renderizar_interfaz_terminal
 
 # Algoritmos de busqueda no informada
 def UCS(mapa, posicion_inicial,tabla_reservas, limite_profundidad):
@@ -25,6 +25,7 @@ def UCS(mapa, posicion_inicial,tabla_reservas, limite_profundidad):
 
         estado_actual_e_t = (posicion[0], posicion[1], len(ruta))
 
+        
         # si es peor que un costo ya encontrado la ignoramos
         if(costo > costos_minimos[estado_actual_e_t]):
             continue
@@ -45,6 +46,7 @@ def UCS(mapa, posicion_inicial,tabla_reservas, limite_profundidad):
             # si no hemos visitado la posicion o encontramos un camino mejor hacia esa posicion, actualizamos el diccionario
             # y lo insertamos a la pq para visitar esta nueva posicion
             estado_espacio_tiempo = (nuevo_estado[0], nuevo_estado[1], turno_llegada)
+    
             if(estado_espacio_tiempo not in costos_minimos or costo_nuevo<costos_minimos[estado_espacio_tiempo] ):
                 #acualizamos nuestra tupla de posiciones de agentes repitiendo la posicion por el costo
                 # ej. si el costo es 3 agregamos 2 tuplas extras
@@ -57,42 +59,53 @@ def UCS(mapa, posicion_inicial,tabla_reservas, limite_profundidad):
     # si no encuentra la salida retorna una lista vacia  
     return []    
 
-
-
-def DFS(mapa, posicion_inicial, tabla_reservas, limite_profundidad):
-    stack = deque()
+def BFS(mapa, posicion_inicial, tabla_reservas, limite_profundidad):
+    
+    cola = deque()
     visitados = set()
+    
     ruta_inicial = [posicion_inicial]
-    # tupla de posicion y turno, representa estado-tiempo
-    estado_inicial_e_t= (posicion_inicial[0], posicion_inicial[1], len(ruta_inicial))
-
-    stack.append((estado_inicial_e_t, ruta_inicial))
-    # los marcamos como visitados al entrar al stack para ahorrar RAM (evitamos repetir elementos)
-    visitados.add(estado_inicial_e_t) 
-    stack.append((estado_inicial_e_t, ruta_inicial))
-    while(stack):
-        estado_actual, ruta = stack.pop()
+    estado_inicial_e_t = (posicion_inicial[0], posicion_inicial[1], len(ruta_inicial))
+    
+    # insertamos la tupla (estado, ruta) sin el costo
+    cola.append((estado_inicial_e_t, ruta_inicial))
+    # Lo marcamos como visitado al momento de encolarlo
+    visitados.add(estado_inicial_e_t)
+    
+    while cola:
+        # dequeue
+        estado_actual, ruta = cola.popleft()
         pos_actual = (estado_actual[0], estado_actual[1])
-        if(mapa[pos_actual] == 3):
+        
+       
+        if mapa[pos_actual] == 3:
             return ruta
+            
+        expansion = obtener_vecinos_validos(mapa, pos_actual)
         
-        
-        for pos_valida in obtener_vecinos_validos(mapa,pos_actual):
-            # usamos el costo no para elegir un camino, sino para contar los retrasos
-            costo_paso = calcular_costo(pos_valida, len(ruta), tabla_reservas)
+        for nuevo_estado in expansion:
+            nuevo_estado = tuple(nuevo_estado)
+            
+         
+            costo_paso = calcular_costo(nuevo_estado, len(ruta), tabla_reservas)
             turno_llegada = len(ruta) + costo_paso
-
+            
             if turno_llegada > limite_profundidad:
                 continue
-
-            estado_espacio_tiempo = (pos_valida[0], pos_valida[1], turno_llegada)
-
-            if estado_espacio_tiempo not in visitados:
-                retrasos = [pos_actual] * (costo_paso - 1)
-                stack.append((pos_valida, ruta + retrasos + [pos_valida]))
-                visitados.add(estado_espacio_tiempo)
+                
+            estado_espacio_tiempo = (nuevo_estado[0], nuevo_estado[1], turno_llegada)
             
+            # Solo revisamos si ya lo visitamos (no comparamos costos)
+            if estado_espacio_tiempo not in visitados:
+                turnos_retraso = [pos_actual] * (costo_paso - 1)
+                nueva_ruta = ruta + turnos_retraso + [nuevo_estado]
+                
+                # Marcamos como visitado antes de encolar para evitar duplicados en la cola (dos estados tienen el mismo vecino)
+                visitados.add(estado_espacio_tiempo)
+                cola.append((estado_espacio_tiempo, nueva_ruta))
+                
     return []
+
 
 def distancia_manhattan(a,b):
     """
@@ -172,11 +185,9 @@ def busqueda_Greedy(mapa, posicion_inicial, posicion_objetivo, tabla_reservas, h
     _heapq.heappush(pq,( heuristica(posicion_inicial, posicion_objetivo),posicion_inicial, ruta_inicial))
 
     visitados = set()
-    #podemos marcar antes igual que en DFS, ya que dentro del mismo estado guardamos el costo  (turnos),
+    #podemos marcar antes igual que en BFS, ya que dentro del mismo estado guardamos el costo  (turnos),
     # por ende si llegamos a la misma posicion pero en distintos turnos, es un estado diferente.
 
-    estado_inicial_e_t = (posicion_inicial[0], posicion_inicial[1], len(ruta_inicial))
-    visitados.add(estado_inicial_e_t)
     # mientras la pq no esté vacía
     while(pq):
         # sacamos la posicion de todos los agentes
@@ -184,7 +195,9 @@ def busqueda_Greedy(mapa, posicion_inicial, posicion_objetivo, tabla_reservas, h
         # si está en la salida, devolvemos la ruta con la que llegó
         if mapa[posicion] == 3:
             return ruta
-
+        estado_actual_e_t = (posicion_inicial[0], posicion_inicial[1], len(ruta))
+        if estado_actual_e_t in visitados:
+            continue
         if(posicion not in visitados):
             visitados.add(posicion)
             # obtenemos todas los movimientos validos
@@ -201,7 +214,7 @@ def busqueda_Greedy(mapa, posicion_inicial, posicion_objetivo, tabla_reservas, h
 
                 estado_e_t = (nuevo_estado[0], nuevo_estado[1], turno_llegada)
                  
-                if estado_inicial_e_t not in visitados:
+                if estado_e_t not in visitados:
                     # valor heurística
                     h = distancia_manhattan(nuevo_estado, posicion_objetivo)
                     # usamos el costo_paso solo para ver cuantos turnos de penalizacion se usan    
@@ -211,41 +224,47 @@ def busqueda_Greedy(mapa, posicion_inicial, posicion_objetivo, tabla_reservas, h
     # si no encuentra la salida retorna una lista vacia  
     return []        
 
-def genetico()
+
             
 def correr_algoritmo_busqueda_no_informada(eleccion_mapa,num_pisos,cantidad_agentes,k_fuego, algoritmo, limite_profundidad):
-    mapa_edificio,posiciones_globales,posicion_fuego = iniciar_entorno(eleccion_mapa,num_pisos,cantidad_agentes, False)
+    mapa_edificio,tupla_posiciones,posicion_fuego = iniciar_entorno(eleccion_mapa,num_pisos,cantidad_agentes, False)
     k = k_fuego # cada k turnos avanza el fuego
     turno_actual = 0
     sobrevivientes_totales = 0
+    turno_ultimo_sobreviviente = 0
+    posiciones_globales = {i: pos for i, pos in enumerate(tupla_posiciones)}
 
     # Diccionario para agrupar las rutas individuales separadas por piso
     rutas_por_piso = {piso: {} for piso in range(mapa_edificio.shape[0])} 
 
-    print("Iniciando evacuación del edificio")
+    #print("Iniciando evacuación del edificio")
     
     while len(posiciones_globales) > 0:
         turno_actual += 1
-        print(mapa_edificio)
-        print(f"posciones agentes {posiciones_globales}")
+        renderizar_interfaz_terminal(mapa_edificio,posiciones_globales,posicion_fuego)
         
         # Propagacion fuego
         if turno_actual % k == 0:
-            mapa_edificio, posiciones_globales, posicion_fuego = propagar_fuego(
-                mapa_edificio, posiciones_globales, posicion_fuego
+            mapa_edificio, tupla_vivos_tras_fuego, posicion_fuego = propagar_fuego(
+                mapa_edificio, tuple(posiciones_globales.values()), posicion_fuego
             )
             # Como el fuego altera la estrucutura, se recalculan los caminos, por ende borramos los calculados anteriormente
             rutas_por_piso = {piso: {} for piso in range(mapa_edificio.shape[0])}
-            
+            posiciones_globales = {
+                            id_ag: pos 
+                            for id_ag, pos in posiciones_globales.items() 
+                            if pos in tupla_vivos_tras_fuego
+                        }
         if len(posiciones_globales) == 0:
-            print("todos murieron")
             break
             
         # Planificacion por cada piso
-        nuevas_posiciones_globales = []
-        
+        nuevas_posiciones_globales = {}
+        tiempos_por_piso = {}
         for piso_actual in range(mapa_edificio.shape[0]):
-            agentes_2d = obtener_agentes_del_piso(posiciones_globales, piso_actual)
+            agentes_2d = [(id_ag, (pos[1], pos[2])) 
+                          for id_ag, pos in posiciones_globales.items() 
+                          if pos[0] == piso_actual]
             
             if not agentes_2d:
                 continue 
@@ -253,21 +272,23 @@ def correr_algoritmo_busqueda_no_informada(eleccion_mapa,num_pisos,cantidad_agen
             mapa_2d = mapa_edificio[piso_actual]
             
             # si ya llegaron todos (los que estan vivos) a la salida, contamos y continua otro piso
-            if all(mapa_2d[agente] == 3 for agente in agentes_2d):
+            if all(mapa_2d[agente] == 3 for  id, agente in agentes_2d):
+                turno_ultimo_sobreviviente = turno_actual
                 sobrevivientes_totales += len(agentes_2d)
+                tiempos_por_piso[piso_actual] = turno_actual
                 continue 
                 
             # si se destruyeron las rutas existentes por el avance del fuego se recalcula
             if not rutas_por_piso[piso_actual]:
                 tabla_reservas = {}
-                for i, pos_agente in enumerate(agentes_2d):
+                for i, pos_agente in agentes_2d:
                     ruta = algoritmo(mapa_2d,pos_agente,tabla_reservas,limite_profundidad)
                     rutas_por_piso[piso_actual][i] = ruta # asignamos la ruta encontrada al agente i
                     # si se encontró una ruta, actualizamos la tabla de reservas
                     if(ruta):
                         tabla_reservas = actualizar_tabla_reservas(tabla_reservas,ruta)
             # simulamos el movimiento            
-            for i, pos_agente in enumerate(agentes_2d):
+            for i, pos_agente in agentes_2d:
                 ruta_actual = rutas_por_piso[piso_actual].get(i,[]) # dado el piso, obtenemos la ruta del agente i
                 # si no se encontró un camino, es porque quedo atrapado
 
@@ -281,44 +302,54 @@ def correr_algoritmo_busqueda_no_informada(eleccion_mapa,num_pisos,cantidad_agen
                 # si la lista es vacia, es porque ya no tiene un camino a la salida (quedó atrapado por el fuego)
                 else:
                     siguiente_posicion = pos_agente
-                nuevas_posiciones_globales.append( (piso_actual, siguiente_posicion[0], siguiente_posicion[1]) ) # agregamos la posicion
-                
-        posiciones_globales = tuple(nuevas_posiciones_globales)
-
-    print(f"Evacuación finalizada en {turno_actual} turnos. Sobrevivientes: {sobrevivientes_totales}")
+                nuevas_posiciones_globales[i] = ( (piso_actual, siguiente_posicion[0], siguiente_posicion[1]) ) # agregamos la posicion
+        turno_ultimo_sobreviviente = max(tiempos_por_piso.values()) if tiempos_por_piso else turno_actual
+                  
+        posiciones_globales = nuevas_posiciones_globales
+    print(f"Evacuación finalizada en {turno_ultimo_sobreviviente} turnos. Sobrevivientes: {sobrevivientes_totales}")    
+    return sobrevivientes_totales, turno_ultimo_sobreviviente
+    
 def correr_algoritmo_busqueda_informada(eleccion_mapa,num_pisos,cantidad_agentes,k_fuego, algoritmo, heuristica, limite_profundidad):
-    mapa_edificio,posiciones_globales,posicion_fuego, posicion_objetivo = iniciar_entorno(eleccion_mapa,num_pisos,cantidad_agentes, True)
+    mapa_edificio,tupla_posiciones,posicion_fuego, posicion_objetivo = iniciar_entorno(eleccion_mapa,num_pisos,cantidad_agentes, True)
     k = k_fuego # cada k turnos avanza el fuego
     turno_actual = 0
+    turno_ultimo_sobreviviente = 0
     sobrevivientes_totales = 0
+
+    #  Convertimos la tupla inicial en un diccionario para mantener trazabilidad entre el agente y su posicion
+    # Ejemplo: {0: (1, 11, 12), 1: (1, 11, 12), 2: (0, 7, 7)}
+    posiciones_globales = {i: pos for i, pos in enumerate(tupla_posiciones)}
 
     # Diccionario para agrupar las rutas individuales separadas por piso
     rutas_por_piso = {piso: {} for piso in range(mapa_edificio.shape[0])} 
-
-    print("Iniciando evacuación del edificio")
+    tiempos_por_piso = {}
+    #print("Iniciando evacuación del edificio")
     
     while len(posiciones_globales) > 0:
         turno_actual += 1
-        print(mapa_edificio)
-        print(f"posciones agentes {posiciones_globales}")
+        renderizar_interfaz_terminal(mapa_edificio,posiciones_globales,posicion_fuego)
         
         # Propagacion fuego
         if turno_actual % k == 0:
-            mapa_edificio, posiciones_globales, posicion_fuego = propagar_fuego(
-                mapa_edificio, posiciones_globales, posicion_fuego
+            mapa_edificio,tupla_vivos_tras_fuego, posicion_fuego = propagar_fuego(
+                mapa_edificio, tuple(posiciones_globales.values()), posicion_fuego
             )
+            posiciones_globales = {
+                id_ag: pos 
+                for id_ag, pos in posiciones_globales.items() 
+                if pos in tupla_vivos_tras_fuego
+            }
             # Como el fuego altera la estrucutura, se recalculan los caminos, por ende borramos los calculados anteriormente
             rutas_por_piso = {piso: {} for piso in range(mapa_edificio.shape[0])}
             
         if len(posiciones_globales) == 0:
-            print("todos murieron")
             break
-            
-        # Planificacion por cada piso
-        nuevas_posiciones_globales = []
         
+        nuevas_posiciones_globales = {}
         for piso_actual in range(mapa_edificio.shape[0]):
-            agentes_2d = obtener_agentes_del_piso(posiciones_globales, piso_actual)
+            agentes_2d  = [(id_ag, (pos[1], pos[2])) 
+                          for id_ag, pos in posiciones_globales.items() 
+                          if pos[0] == piso_actual]
             
             if not agentes_2d:
                 continue 
@@ -326,21 +357,29 @@ def correr_algoritmo_busqueda_informada(eleccion_mapa,num_pisos,cantidad_agentes
             mapa_2d = mapa_edificio[piso_actual]
             
             # si ya llegaron todos (los que estan vivos) a la salida, contamos y continua otro piso
-            if all(mapa_2d[agente] == 3 for agente in agentes_2d):
+            
+            if all(mapa_2d[agente] == 3 for  id, agente in agentes_2d):
                 sobrevivientes_totales += len(agentes_2d)
+                turno_ultimo_sobreviviente = turno_actual
+                tiempos_por_piso[piso_actual] = turno_actual    
+        
                 continue 
                 
             # si se destruyeron las rutas existentes por el avance del fuego se recalcula
             if not rutas_por_piso[piso_actual]:
                 tabla_reservas = {}
-                for i, pos_agente in enumerate(agentes_2d):
+                # si es para simular el genetico, usamos el orden del individuo
+                
+                for i, pos_agente in agentes_2d:
                     ruta = algoritmo(mapa_2d,pos_agente,posicion_objetivo, tabla_reservas, heuristica, limite_profundidad)
                     rutas_por_piso[piso_actual][i] = ruta # asignamos la ruta encontrada al agente i
+                
                     # si se encontró una ruta, actualizamos la tabla de reservas
                     if(ruta):
                         tabla_reservas = actualizar_tabla_reservas(tabla_reservas,ruta)
-            # simulamos el movimiento            
-            for i, pos_agente in enumerate(agentes_2d):
+            # simulamos el movimiento     
+                  
+            for i, pos_agente in agentes_2d:
                 ruta_actual = rutas_por_piso[piso_actual].get(i,[]) # dado el piso, obtenemos la ruta del agente i
                 # si no se encontró un camino, es porque quedo atrapado
 
@@ -354,10 +393,11 @@ def correr_algoritmo_busqueda_informada(eleccion_mapa,num_pisos,cantidad_agentes
                 # si la lista es vacia, es porque ya no tiene un camino a la salida (quedó atrapado por el fuego)
                 else:
                     siguiente_posicion = pos_agente
-                nuevas_posiciones_globales.append( (piso_actual, siguiente_posicion[0], siguiente_posicion[1]) ) # agregamos la posicion
-                
-        posiciones_globales = tuple(nuevas_posiciones_globales)
-
-    print(f"Evacuación finalizada en {turno_actual} turnos. Sobrevivientes: {sobrevivientes_totales}")
+                nuevas_posiciones_globales[i] = (piso_actual, siguiente_posicion[0], siguiente_posicion[1]) # agregamos la posicion
+        turno_ultimo_sobreviviente = max(tiempos_por_piso.values()) if tiempos_por_piso else turno_actual  
+        posiciones_globales = nuevas_posiciones_globales
+    print(f"Evacuación finalizada en {turno_ultimo_sobreviviente} turnos. Sobrevivientes: {sobrevivientes_totales}")
+    return sobrevivientes_totales, turno_ultimo_sobreviviente
+   
 
 
